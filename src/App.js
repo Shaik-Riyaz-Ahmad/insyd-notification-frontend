@@ -4,6 +4,9 @@ import axios from 'axios';
 import './App.css';
 import './styles.css';
 
+// Configure axios with base URL
+axios.defaults.baseURL = process.env.REACT_APP_API_URL;
+
 const MOCK_USER_ID = 'user123';
 
 function NotificationList() {
@@ -150,23 +153,41 @@ function EventTrigger() {
   const [targetUserId, setTargetUserId] = useState('user123');
   const [content, setContent] = useState('');
   const [isLoading, setIsLoading] = useState(false);
+  const [status, setStatus] = useState('');
 
   const handleSubmit = async (e) => {
     e.preventDefault();
     setIsLoading(true);
+    setStatus('');
+    
     try {
-      await axios.post('/events', {
+      console.log('Sending event to:', axios.defaults.baseURL + '/events');
+      const response = await axios.post('/events', {
         type,
         sourceUserId: MOCK_USER_ID,
         targetUserId,
         data: { content },
         timestamp: new Date().toISOString()
       });
-      setContent('');
+      
+      console.log('Response:', response);
+      
+      if (response.status === 200 || response.status === 201) {
+        setContent('');
+        setStatus('Event sent successfully!');
+      }
     } catch (error) {
       console.error('Error sending event:', error);
+      console.error('Error details:', {
+        message: error.message,
+        status: error.response?.status,
+        data: error.response?.data,
+        config: error.config
+      });
+      setStatus(error.response?.data?.message || 'Failed to send event. Please try again.');
+    } finally {
+      setIsLoading(false);
     }
-    setIsLoading(false);
   };
 
   return (
@@ -221,6 +242,12 @@ function EventTrigger() {
         >
           {isLoading ? 'Sending...' : 'Send Event'}
         </button>
+        
+        {status && (
+          <div className={`status-message ${status.includes('success') ? 'success' : 'error'}`}>
+            {status}
+          </div>
+        )}
       </form>
     </div>
   );
